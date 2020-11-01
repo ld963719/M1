@@ -1,0 +1,137 @@
+format PE console
+entry start
+
+include 'win32a.inc'
+
+;------------------------------------------------------------------------—
+section '.data' data readable writable
+
+;variables for data output
+countOut db 'Count of Lucas numbers from %d to word: %d',0
+currentNumberOut db 'Lucas number %d = %d', 10, 0
+countOfNumbers dd 0
+previousNumber dw 0
+currentNumber dw 0
+
+tmpStack dd ?
+
+
+;------------------------------------------------------------------------—
+section '.code' code readable executable
+start:
+
+;counting the number of Lucas numbers from 1 to machine word
+call CountLucasNumbers
+
+finish:
+call [getch]
+
+push 0
+call [ExitProcess]
+;------------------------------------------------------------------------—
+CountLucasNumbers:
+    mov [tmpStack], esp
+
+    ;zeroing variables
+    xor ecx, ecx
+    xor eax, eax
+    xor ebx, ebx
+    xor edx, edx
+    inc ecx
+
+    ;the first number = 2
+    mov bx, 2
+    mov [previousNumber], bx
+
+    push ebx
+    push ecx
+    push currentNumberOut
+    call[printf]
+    add esp, 4
+    mov ecx, 2
+    mov [countOfNumbers], ecx
+
+    ;the second number = 1
+    mov ax, 1
+    mov [currentNumber], ax
+
+    push eax
+    push ecx
+    push currentNumberOut
+    call[printf]
+    add esp, 4
+    mov ecx, 2
+
+    ;switching to a loop
+    jmp countNumbersLoop
+
+
+countNumbersLoop:
+
+    ;dx=0
+    xor dx, dx
+    mov ax, [currentNumber]
+    mov bx, [previousNumber]
+
+    ; saving current number in dx
+    mov dx, ax
+
+    ; getting the next Lucas number
+    add ax, bx
+    mov [currentNumber], ax
+
+    ;checking ax  for overflow
+    cmp ax, dx
+    jle endCount
+
+    ; continue if there was no overflow
+    mov bx, dx
+    push eax
+    mov ecx, [countOfNumbers]
+
+    ;incrementing count of numbers
+    inc ecx
+    push ecx
+    push currentNumberOut
+
+    ; outputing current Lucas number
+    call[printf]
+    add esp, 4
+    mov [previousNumber], bx
+    mov ecx,[countOfNumbers]
+    inc ecx
+    mov [countOfNumbers], ecx
+
+    ; going to another iteration
+    jmp countNumbersLoop
+
+endCount:
+    mov ecx, [countOfNumbers]
+    push ecx
+    mov ebx,1
+    push ebx
+    push countOut
+
+    ; outputing final count of Lucas numbers from 1 to machine word
+    call[printf]
+    add esp, 4
+    mov esp, [tmpStack]
+    ret
+;-------------------------------third act - including HeapApi------------------------—
+
+section '.idata' import data readable
+library kernel, 'kernel32.dll',\
+msvcrt, 'msvcrt.dll',\
+user32,'USER32.DLL'
+
+include 'api\user32.inc'
+include 'api\kernel32.inc'
+import kernel,\
+ExitProcess, 'ExitProcess',\
+HeapCreate,'HeapCreate',\
+HeapAlloc,'HeapAlloc'
+include 'api\kernel32.inc'
+import msvcrt,\
+printf, 'printf',\
+scanf, 'scanf',\
+getch, '_getch'
